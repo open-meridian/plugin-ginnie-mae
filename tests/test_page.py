@@ -10,7 +10,7 @@ from ginnie_mae.preview import render
 
 def test_the_pages_render_on_sample_data() -> None:
     connection = render("connection")
-    assert "Sample data" in connection and "Files" in connection
+    assert "Sample data" in connection and "Does not stream" in connection
     datasets = render("datasets")
     assert "ginnie-mae:ginnie_mae" in datasets
 

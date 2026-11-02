@@ -130,7 +130,7 @@ def run():
         read("/resolve?scheme=agency_pool&value=AA0912&source=GNMA&description=GNMA%20II%20AA0912")),
         "step 3, the reader did not bring the pool AA0912 in")
     pool = brought["instrument_id"]
-    log(f"the pool: {brought}")
+    log(f"the pool: {brought}; its record: {read('/record?id=' + pool)}")
     runner("licence", DATASET, "kept=true", "retention_days=0", "derived_use=true", "display=true",
            "personal_use=false", "note=Ginnie Mae's disclosures, under the firm's download terms.")
     runner("entitle", "--instance", "reader", DATASET, "note=The e2e's reader reads factors.")
@@ -203,6 +203,7 @@ def main():
     except (Failed, subprocess.TimeoutExpired, KeyError, ValueError, IndexError, TypeError) as failed:
         with open(COMPONENTS, "a", encoding="utf-8") as kept:
             kept.write(compose("logs", "--no-color", check=False).stdout)
+            kept.write(compose("run", "--rm", "-T", "store", "lake", check=False).stdout)
         compose("--profile", "runner", "down", "-v", "--remove-orphans", check=False)
         print(f"e2e FAILED: {failed}; the runner's log is in {LOG}, the components' in {COMPONENTS}",
               file=sys.stderr)
