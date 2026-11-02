@@ -20,7 +20,7 @@ a pool through core's tools (`dashboard__complete_instruments`).
    2026-11-20 as a Ginnie II pool, published 2026-11-05).
 4. Factor B: a setting changed wakes the plugin's check, which finds
    October's Factor B, published after its Factor A -- 0.83102211 --
-   recorded as the row's version 2; read by payment date, the pool's October
+   recorded as the row's next version; read by payment date, the pool's October
    factor is the final one.
 5. Caught up: a read after the sequence the reader last saw answers it alone.
 6. Its terms offered to the pool's record, as the plugin's log says, and
@@ -152,10 +152,14 @@ def run():
            "personal_use=false", "note=Ginnie Mae's disclosures, under the firm's download terms.")
     runner("entitle", "--instance", "reader", DATASET, "note=The e2e's reader reads factors.")
     asked = f"/factors?subject={pool}&from=2025-11-01&to=2026-11-30"
-    year = until(120, lambda: (lambda r: r if len(r["factors"]) == 2 else None)(read(asked)),
-                 "step 3, the pool's two factors were not read")
+    # Both months, each with its payment date: a row recorded before the
+    # payment calendar answered has none, and is its next version once it
+    # does -- never a guessed date.
+    year = until(180, lambda: (lambda r: r if len(r["factors"]) == 2
+                               and all(f["payment_date"] for f in r["factors"]) else None)(
+        read(asked)), "step 3, the pool's two factors were not read with their payment dates")
     # September's Factor B, published after its Factor A, supersedes it.
-    must(months(year) == [("202609", "0.84017733", 1), ("202610", "0.83102210", 1)],
+    must([m[:2] for m in months(year)] == [("202609", "0.84017733"), ("202610", "0.83102210")],
          f"step 3, September's final and October's preliminary factors: {year}")
     by_month = {f["month"]: f for f in year["factors"]}
     october, september = by_month["202610"], by_month["202609"]
@@ -168,21 +172,23 @@ def run():
          and "factorB2_202609" in september["raw"],
          f"step 3, September's from its Factor B, paid the 20th: {september}")
     seen = year["watermark"].get(DATASET, 0)
+    first = october["version"]
     must(seen >= 2, f"step 3, the reader's watermark: {year['watermark']}")
 
     # 4. Factor B: the check woken finds October's final factor.
     runner("settings", "sample_data=true", f"payment_calendar={CALENDAR}",
            "files_url=https://files.invalid/ginnie-mae")
-    again = until(120, lambda: (lambda r: r if months(r)[-1:] == [("202610", "0.83102211", 2)]
+    again = until(120, lambda: (lambda r: r if months(r)[-1][:2] == ("202610", "0.83102211")
                                 else None)(read(asked)),
-                  "step 4, October's Factor B was not read as version 2")
+                  "step 4, October's Factor B was not read")
     final = {f["month"]: f for f in again["factors"]}["202610"]
-    must(final["business_date"] == "2026-11-09" and "factorB2_202610" in final["raw"],
-         f"step 4, Factor B published 9 November: {again}")
+    must(final["version"] == first + 1 and final["business_date"] == "2026-11-09"
+         and "factorB2_202610" in final["raw"] and final["payment_date"] == "2026-11-20",
+         f"step 4, Factor B, published 9 November, October's next version: {again}")
 
     # 5. Caught up after the sequence last seen.
     caught = read(f"/factors?subject={pool}&after={seen}")
-    must([(f["month"], f["version"]) for f in caught["factors"]] == [("202610", 2)],
+    must([(f["month"], f["version"]) for f in caught["factors"]] == [("202610", first + 1)],
          f"step 5, Factor B caught up after {seen}: {caught}")
 
     # 6. Terms offered, nothing refused.
@@ -208,7 +214,7 @@ def run():
           f"files location; on sample data the Ginnie II pool AA0912 brought in ({pool}), its "
           f"factors recorded when the reader asked -- September's 0.84017733 and October's "
           f"Factor A 0.83102210 as the fixtures key them, paid 2026-10-20 and 2026-11-20 -- "
-          f"October's Factor B 0.83102211 as version 2, read by payment date and caught up after "
+          f"October's Factor B 0.83102211 as its next version, read by payment date and caught up after "
           f"the watermark; its terms offered to its record; read_connection and read_datasets "
           f"answering")
 
