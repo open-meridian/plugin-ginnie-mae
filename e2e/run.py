@@ -5,7 +5,8 @@ the Makefile, which builds the image and writes the harness's plugins first;
 standard library only. The harness's stand-in for the platform holds no
 Ginnie Mae pool, so the reader brings the Ginnie II pool AA0912 in as a
 custodian's statement would, stating its number, a description and its
-currency: the deployment's provisional record.
+currency: the deployment's provisional record, which the admin completes as
+a pool through core's tools (`dashboard__complete_instruments`).
 
 1. Started with no files location: Connection says so, and nothing is
    recorded.
@@ -130,7 +131,18 @@ def run():
         read("/resolve?scheme=agency_pool&value=AA0912&source=GNMA&description=GNMA%20II%20AA0912")),
         "step 3, the reader did not bring the pool AA0912 in")
     pool = brought["instrument_id"]
-    log(f"the pool: {brought}; its record: {read('/record?id=' + pool)}")
+    # The provisional record names its template (TPL-mbs-pool), its type
+    # still to complete: a deployment admin completes it through core's
+    # tools, as at the Instruments page, and the lake then takes factors on it.
+    runner("grant", "--level", "admin", "--role", "data")
+    runner("mcp", "connect", "--covers", "deployment_admin", "--covers", f"{INSTANCE}:data:admin")
+    runner("mcp", "complete", "--identifier", "agency_pool (GNMA): AA0912", "asset_class=debt",
+           "currency=USD", "instrument_type=mbs_pool", "source=the e2e's custodian statement",
+           "note=A Ginnie II pool a custodian reports.")
+    record = read("/record?id=" + pool)
+    log(f"the pool: {brought}; its record: {record}")
+    must(record["instrument_type"] == "INSTRUMENT_TYPE_MBS_POOL",
+         f"step 3, the pool's record completed as a pool: {record}")
     runner("licence", DATASET, "kept=true", "retention_days=0", "derived_use=true", "display=true",
            "personal_use=false", "note=Ginnie Mae's disclosures, under the firm's download terms.")
     runner("entitle", "--instance", "reader", DATASET, "note=The e2e's reader reads factors.")
@@ -171,8 +183,6 @@ def run():
          f"step 6, the pool's terms offered: {logs[-1500:]}")
 
     # 7. The pages, and their tools.
-    runner("grant", "--level", "admin", "--role", "data")
-    runner("mcp", "connect", "--covers", "deployment_admin", "--covers", f"{INSTANCE}:data:admin")
     tools = runner("mcp", "list").split()
     read_connection = next((t for t in tools if t.endswith("read_connection")), "")
     read_datasets = next((t for t in tools if t.endswith("read_datasets")), "")
