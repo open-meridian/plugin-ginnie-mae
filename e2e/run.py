@@ -149,9 +149,8 @@ def run():
     asked = f"/factors?subject={pool}&from=2025-11-01&to=2026-11-30"
     year = until(120, lambda: (lambda r: r if len(r["factors"]) == 2 else None)(read(asked)),
                  "step 3, the pool's two factors were not read")
-    # September's Factor B, published after its Factor A, is its version 2,
-    # though it states the same factor: the final file is its source now.
-    must(months(year) == [("202609", "0.84017733", 2), ("202610", "0.83102210", 1)],
+    # September's Factor B, published after its Factor A, supersedes it.
+    must(months(year) == [("202609", "0.84017733", 1), ("202610", "0.83102210", 1)],
          f"step 3, September's final and October's preliminary factors: {year}")
     by_month = {f["month"]: f for f in year["factors"]}
     october, september = by_month["202610"], by_month["202609"]
@@ -164,7 +163,7 @@ def run():
          and "factorB2_202609" in september["raw"],
          f"step 3, September's from its Factor B, paid the 20th: {september}")
     seen = year["watermark"].get(DATASET, 0)
-    must(seen >= 3, f"step 3, the reader's watermark: {year['watermark']}")
+    must(seen >= 2, f"step 3, the reader's watermark: {year['watermark']}")
 
     # 4. Factor B: the check woken finds October's final factor.
     runner("settings", "sample_data=true", "files_url=https://files.invalid/ginnie-mae")

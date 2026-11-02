@@ -40,13 +40,13 @@ async def test_a_pools_factors_as_the_fixtures_key_them(tmp_path: Path) -> None:
     lake.answer("ObservationsWanted", lambda _: want("w-1", [POOL]).message)
     await lake.hear(work, "ObservationsWanted")
     rows = factors(lake)
-    # Factor A's two months, then Factor B's September (October's B not yet).
-    assert [(r.meta.row_key, str(as_decimal(r.factor))) for r in rows] == [
-        ("GNMA:AA0912:202609", "0.84017733"),
-        ("GNMA:AA0912:202610", "0.83102210"),
-        ("GNMA:AA0912:202609", "0.84017733"),
+    # October's Factor A (its Factor B not yet published), then September's
+    # Factor B, which supersedes its Factor A.
+    assert [(r.meta.row_key, str(as_decimal(r.factor)), r.meta.business_date) for r in rows] == [
+        ("GNMA:AA0912:202610", "0.83102210", "2026-11-05"),
+        ("GNMA:AA0912:202609", "0.84017733", "2026-10-08"),
     ]
-    october = rows[1]
+    october = rows[0]
     assert (october.factor_month, october.record_date, october.payment_date) == (
         "202610",
         "2026-10-31",
@@ -56,7 +56,7 @@ async def test_a_pools_factors_as_the_fixtures_key_them(tmp_path: Path) -> None:
     assert october.meta.source.dataset == f"{INSTANCE}:ginnie_mae"
     assert october.meta.raw.key.endswith("#3")
     assert not october.HasField("wac") and not october.meta.source_times
-    assert rows[0].payment_date == "2026-10-20"
+    assert rows[1].payment_date == "2026-10-20"
     assert POOL in work.held and not lake.on("DeclineWant")
 
 
@@ -65,6 +65,7 @@ async def test_factor_b_is_the_rows_next_version(tmp_path: Path) -> None:
     work = feed(lake, tmp_path)
     lake.answer("ObservationsWanted", lambda _: want("w-1", [POOL]).message)
     await lake.hear(work, "ObservationsWanted")
+    await work.check()
     await work.check()
     final = lake.on("RecordFactors")[-1].factors
     assert [(r.meta.row_key, str(as_decimal(r.factor)), r.meta.business_date) for r in final] == [
@@ -153,3 +154,16 @@ def test_a_record_is_identified_by_its_identifier_or_terms() -> None:
     tranche = identify(held[TRANCHE])
     assert tranche is not None and tranche.floating and tranche.series == "2002-005O"
     assert identify(held[BOND]) is None
+
+
+async def test_checks_again_send_nothing_new(tmp_path: Path) -> None:
+    lake = recorder()
+    work = feed(lake, tmp_path)
+    lake.answer("ObservationsWanted", lambda _: want("w-1", [POOL]).message)
+    await lake.hear(work, "ObservationsWanted")
+    await work.check()
+    before = {k: v[0] for k, v in lake._answers["RecordFactors"].versions.items()}  # type: ignore[attr-defined]
+    await work.check()
+    await work.check()
+    after = {k: v[0] for k, v in lake._answers["RecordFactors"].versions.items()}  # type: ignore[attr-defined]
+    assert after == before

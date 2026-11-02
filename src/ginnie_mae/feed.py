@@ -186,8 +186,9 @@ class Disclosures(data.Role):
     async def rows(
         self, securities: list[Security], months: list[str], again: bool = False
     ) -> list[tuple[Security, Found, str]]:
-        """Each security's rows over the months named, oldest first, Factor A
-        before Factor B."""
+        """Each security's rows over the months named, oldest first: a pool's
+        Factor B row where its month's final file is published, else its
+        Factor A row."""
         pools = [s for s in securities if s.is_pool]
         tranches = [s for s in securities if not s.is_pool]
         out: list[tuple[Security, Found, str]] = []
@@ -196,7 +197,13 @@ class Disclosures(data.Role):
         for month in months:
             read = await self.library.read(month, again=again)
             if pools:
-                for named, found in self.library.pools(read, [s.pool for s in pools]):
+                rows = self.library.pools(read, [s.pool for s in pools])
+                # Factor B supersedes Factor A: once a pool's final factor is
+                # published, its preliminary one is not recorded again.
+                final = {named for named, found in rows if found.file.startswith("factorB")}
+                for named, found in rows:
+                    if named in final and found.file.startswith("factorA"):
+                        continue
                     out += [(s, found, month) for s in pools if same_pool(s.pool, named)]
             if tranches:
                 wanted = [(s.series, s.tranche) for s in tranches]
