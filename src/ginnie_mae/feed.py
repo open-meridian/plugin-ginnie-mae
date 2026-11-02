@@ -21,7 +21,9 @@ ID, its row key `GNMA`, the pool or the series and tranche, and the factor
 month (`GNMA:AA0912:202609`, as the contract's fixtures key the agencies'),
 the factor exactly as published, its factor month (the file's month), record
 date (the factor file's as-of date, or the REMIC file's record date) and
-payment date (the pool's program's day, or the REMIC file's own), its
+payment date (the pool's program's day rolled by the deployment's calendar --
+the record's payment calendar, else the US dollar's -- and unset where it
+does not answer; or the REMIC file's own), its
 business date the day the file says it was published; a floating or inverse
 floating tranche's coupon for the period. Factor B's row is the row's next
 version, its source the final file, whether or not its factor changed. Ginnie Mae's factor files
@@ -33,7 +35,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Any
@@ -44,7 +46,7 @@ from meridian.helpers import debt
 from meridian.plugin.v1 import operations_pb2 as ops
 from meridian.roles import data
 
-from . import days
+from . import agency, days
 from .layouts import PoolRow, TrancheRow, same_pool
 from .library import Found, Library
 
@@ -74,6 +76,7 @@ class Security:
     pool: str = ""
     series: str = ""
     tranche: str = ""
+    calendar: str = ""
     floating: bool = False
 
     @property
@@ -94,7 +97,7 @@ def identify(record: ops.InstrumentRecord) -> Security | None:
                 pool = pool or held.value
         if not pool or stated not in (ops.MORTGAGE_AGENCY_UNSPECIFIED, ops.MORTGAGE_AGENCY_GNMA):
             return None
-        return Security(subject, pool=pool)
+        return Security(subject, pool=pool, calendar=terms.payment_calendar_id)
     if record.instrument_type == ops.INSTRUMENT_TYPE_CMO_TRANCHE or record.HasField("cmo_tranche"):
         terms = record.cmo_tranche
         if terms.agency != ops.MORTGAGE_AGENCY_GNMA or not terms.deal or not terms.class_name:
@@ -112,12 +115,19 @@ class Disclosures(data.Role):
     """The data role's class (open-meridian 0.35)."""
 
     def __init__(
-        self, library: Library, now: Callable[[], datetime] = utc_now, terms: Any = None
+        self,
+        library: Library,
+        now: Callable[[], datetime] = utc_now,
+        terms: Any = None,
+        payment_calendar: str = agency.USD_CALENDAR,
     ) -> None:
         self.library = library
         self.now = now
         self.terms = terms
         self.wants = data.Wants(self, (KEY,), clock_ns=lambda: _ns(self.now()))
+        #: The deployment's business days: a record's payment calendar, else
+        #: the setting's (the US dollar's, the Federal Reserve Banks').
+        self.calendar = agency.Days(self, payment_calendar)
         self.held: dict[str, Security] = {}
         self.last_check: datetime | None = None
         self.error = ""
@@ -132,36 +142,25 @@ class Disclosures(data.Role):
         moment = fixed() if callable(fixed) else self.now()
         return moment.astimezone(NEW_YORK).date()
 
-    def months(self) -> list[str]:
-        latest = days.latest_month(self.today())
+    async def months(self) -> list[str]:
+        latest = await days.latest_month(self.today(), self.calendar)
         return [days.add_months(latest, -n) for n in range(HISTORY_MONTHS - 1, -1, -1)]
 
     # ── Resolving ───────────────────────────────────────────────────────
 
-    async def security(self, subject: str, as_of_ns: int) -> Security | None:
-        found = await self.resolve_instrument(instrument_id=subject, as_of_ns=as_of_ns)
-        return identify(found.instrument) if found.found else None
-
     async def confirmed(self, security: Security, as_of_ns: int) -> bool:
-        """Whether a pool's number resolves to its record alone: one meeting
-        two records is reported ambiguous, and nothing is recorded for it."""
+        """Whether a pool's number may be recorded against (`agency.confirmed`);
+        a tranche has none to confirm."""
         if not security.is_pool:
             return True
-        named = [meridian.Identifier(scheme="agency_pool", value=security.pool, source=CODE)]
-        found = await self.resolve_identifier(identifiers=named, as_of_ns=as_of_ns)
-        if not found.found and found.miss_reason == ops.MISS_REASON_AMBIGUOUS:
-            await self.report_missing_instrument(
-                source=CODE, identifiers=named, as_of_ns=as_of_ns, reason=ops.MISS_REASON_AMBIGUOUS
-            )
-            return False
-        return True
+        return await agency.confirmed(self, security.pool, CODE, as_of_ns)
 
     # ── Rows ────────────────────────────────────────────────────────────
 
-    def factor(self, security: Security, found: Found, month: str) -> meridian.Factor:
+    async def factor(self, security: Security, found: Found, month: str) -> meridian.Factor:
         row = found.row
         if isinstance(row, PoolRow):
-            paid = days.payment_date(month, found.program)
+            paid = await days.payment_date(month, found.program, self.calendar, security.calendar)
             key = f"{CODE}:{row.pool}:{month}"
             coupon = None
         else:
@@ -215,7 +214,7 @@ class Disclosures(data.Role):
                     ]
         return out
 
-    async def record(self, found: list[tuple[Security, Found, str]], want_id: str = "") -> int:
+    async def record(self, found: Sequence[tuple[Any, ...]], want_id: str = "") -> int:
         """The rows found recorded, Factor A's in one batch before Factor B's,
         so the final factor is the row's next version, after the preliminary;
         their terms offered."""
@@ -224,7 +223,7 @@ class Disclosures(data.Role):
             [r for r in found if r[1].file.startswith("factorA")],
             [r for r in found if not r[1].file.startswith("factorA")],
         ):
-            factors = [self.factor(s, f, m) for s, f, m in batch]
+            factors = [await self.factor(s, f, m) for s, f, m in batch]
             if factors:
                 sent += await self.wants.record("factors", factors, KEY, want_id)
         if self.terms is not None:
@@ -246,44 +245,26 @@ class Disclosures(data.Role):
         subjects: list[str],
         kinds: tuple[int, ...],
     ) -> dict[str, str]:
-        """One want answered from Ginnie Mae's files."""
+        """One want answered from Ginnie Mae's files (`agency.answer`)."""
         if key != KEY or want.data_type != FACTOR:
             return dict.fromkeys(subjects, "not_covered")
-        as_of = _ns(self.now())
-        declined: dict[str, str] = {}
-        securities: list[Security] = []
-        for subject in subjects:
-            security = await self.security(subject, as_of)
-            if security is None or not await self.confirmed(security, as_of):
-                declined[subject] = "not_covered"
-            else:
-                securities.append(security)
-        found = await self.rows(securities, self.months())
-        named = {s.subject for s, _, _ in found}
-        for security in securities:
-            if security.subject not in named:
-                declined[security.subject] = "source_silent"
-        await self.record(found, want.want_id)
-        kept = [s for s in securities if s.subject in named]
-        log.info(
-            "want %s: %d of %d subjects found, %d factors, declined %s",
-            want.want_id,
-            len(kept),
-            len(subjects),
-            len(found),
-            declined or "none",
+        return await agency.answer(
+            self,
+            want,
+            subjects,
+            kinds,
+            identify=identify,
+            confirm=self.confirmed,
+            rows=self.rows,
+            record=self.record,
+            months=await self.months(),
+            held=self.held,
+            as_of_ns=_ns(self.now()),
         )
-        if want.standing and kept:
-            for security in kept:
-                self.held[security.subject] = security
-            self.wants.stand(want, [s.subject for s in kept], kinds)
-        return declined
 
     async def on_want_withdrawn(self, heard: meridian.Heard[ops.WantWithdrawnEvent]) -> None:
-        self.wants.withdraw(heard.message.want_id)
-        still = {s for w in self.wants.standing.values() for s in w.subjects}
-        for subject in [s for s in self.held if s not in still]:
-            del self.held[subject]
+        """A standing want no reader renewed (`agency.withdrawn`)."""
+        agency.withdrawn(self, heard.message.want_id, self.held)
 
     # ── Keeping current ─────────────────────────────────────────────────
 
@@ -294,7 +275,7 @@ class Disclosures(data.Role):
         self.last_check = self.now()
         if not self.held:
             return 0
-        latest = days.latest_month(self.today())
+        latest = await days.latest_month(self.today(), self.calendar)
         months = [days.add_months(latest, -1), latest]
         try:
             sent = await self.record(await self.rows(list(self.held.values()), months, again=True))

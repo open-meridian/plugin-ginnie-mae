@@ -4,7 +4,9 @@ Ginnie Mae's files present mapped to the plugin's own work on the samples.
 **Data.** Presented: `records-a-pools-factor` (the Ginnie II pool AA0912);
 `an-asset-that-does-not-resolve` (a pool number meeting two records);
 `a-subject-declined` (a bond); `a-standing-want-withdrawn`;
-`reads-its-datasets-licences`; and the cases the SDK answers. Not presented,
+`reads-its-datasets-licences`; `reads-a-calendar` (the deployment's US
+dollar calendar, by which a pool's payment date is rolled); and the cases
+the SDK answers. Not presented,
 with why, every case about a kind of data its files never state, and
 `reports-its-feed-delay`: Ginnie Mae's files state the day they were
 published, never a time, so no age at the edge is measured.
@@ -50,8 +52,8 @@ WHY = {
     "ratings": "it publishes no ratings",
     "derived series": "it publishes no figure of its own",
     "calendars": (
-        "it dates each pool's payment by its program's day on the Federal Reserve's business "
-        "days, and a tranche's as Ginnie Mae's file states it; it reads no calendar"
+        "its offers state a payment day of the month, never a date rolled by a calendar; the "
+        "data role reads the calendar"
     ),
     "settlement dates": "it records factors as published; it never computes a settlement date",
 }
@@ -61,6 +63,7 @@ DATA_PRESENTED = {
     "a-subject-declined",
     "a-standing-want-withdrawn",
     "reads-its-datasets-licences",
+    "reads-a-calendar",
 }
 REFERENCE_PRESENTED = {
     "fills-a-template",
@@ -122,6 +125,9 @@ def data_producers(tmp: Path) -> dict[str, Producer]:
         "a-subject-declined": wanted([BOND]),
         "a-standing-want-withdrawn": withdrawn,
         "reads-its-datasets-licences": licences,
+        # The record's payment calendar, else the US dollar's, read for each
+        # pool's payment date.
+        "reads-a-calendar": wanted([POOL]),
     }
 
 

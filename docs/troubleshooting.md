@@ -12,6 +12,12 @@ address asked and why. Check the address and, if the location asks for one,
 the token. A file the location does not hold is never an error: it is taken
 as not published yet.
 
+## Connection says dates not set
+
+The payment calendar did not answer, or does not cover the day: a pool's
+factors are recorded with no payment date until it does. Check **Payment
+calendar** in Settings names a calendar the deployment holds.
+
 ## A pool is declined source silent
 
 None of the last thirteen months' factor files names the pool: check the

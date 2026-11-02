@@ -17,6 +17,14 @@ The first version (ruling 686, the plan's Q13 and G'), on open-meridian
   its template (`TPL-mbs-pool`, `TPL-cmo-tranche`), each with its
   provenance.
 - Factor months, record dates and payment dates as the contract's fixtures
-  key them.
+  key them; a pool's payment date rolled to the next business day by the
+  deployment's calendar -- the record's payment calendar, else the
+  `payment_calendar` setting, by default the platform's US dollar calendar
+  (the Federal Reserve Banks', `CAL-01M4VF0F3HJ73RFTB0XWVK1B73`) through the
+  SDK's `MarketDays` -- and left unset where the calendar does not answer or
+  does not cover the day.
+- `agency.py`: the logic this plugin and `plugin-gse-disclosures` hold the
+  same (business days on the calendar, a pool's number confirmed, a factor
+  want answered, terms offered), one module, proposed for an SDK helper.
 - The files read from a location the deployment admin names, with sample
   data for development; the data role's Connection and Datasets pages.

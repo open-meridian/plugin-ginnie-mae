@@ -17,6 +17,7 @@ from meridian.suites import Recorder
 from ginnie_mae.feed import Disclosures
 from ginnie_mae.files import Samples, Source, Store
 from ginnie_mae.library import Library
+from ginnie_mae.preview import calendar_answer
 from ginnie_mae.terms import Terms
 
 INSTANCE = "ginnie-mae-1"
@@ -152,6 +153,7 @@ def answering(recorder: Recorder, ambiguous: bool = False) -> Recorder:
     recorder.answer("ResolveIdentifier", resolve)
     recorder.answer("ReadTemplate", template)
     recorder.answer("RecordFactors", Lake())
+    recorder.answer("ReadCalendar", calendar_answer)
     return recorder
 
 

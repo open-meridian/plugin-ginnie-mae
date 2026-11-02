@@ -12,7 +12,8 @@ from meridian.plugin.v1 import operations_pb2 as ops
 from meridian.suites import Recorder
 
 from ginnie_mae import days
-from ginnie_mae.feed import identify
+from ginnie_mae.agency import Days
+from ginnie_mae.feed import Disclosures, identify
 from ginnie_mae.terms import Terms
 
 from conftest import (
@@ -25,6 +26,7 @@ from conftest import (
     answering,
     factors,
     feed,
+    library,
     records,
     want,
 )
@@ -138,12 +140,27 @@ async def test_terms_offered_to_the_pools_record(tmp_path: Path) -> None:
     }
 
 
-def test_the_dates_of_a_factor() -> None:
-    assert days.payment_date("202609", "II") == date(2026, 10, 20)
-    assert days.payment_date("202610", "I") == date(2026, 11, 16)  # the 15th, a Sunday
-    assert days.payment_date("202610", "III") is None
-    assert days.latest_month(date(2026, 11, 4)) == "202609"
-    assert days.latest_month(date(2026, 11, 5)) == "202610"
+async def test_the_dates_of_a_factor_by_the_calendar() -> None:
+    lake = recorder()
+    calendar = Days(lake.bind(Disclosures(library(Path("/nonexistent")))), "CAL-USD")
+    assert await days.payment_date("202609", "II", calendar) == date(2026, 10, 20)
+    assert await days.payment_date("202610", "I", calendar) == date(2026, 11, 16)  # 15th a Sunday
+    assert await days.payment_date("202610", "III", calendar) is None
+    assert await days.latest_month(date(2026, 11, 4), calendar) == "202609"
+    assert await days.latest_month(date(2026, 11, 5), calendar) == "202610"
+    assert {p.calendar_id for p in lake.on("ReadCalendar")} == {"CAL-USD"}
+
+
+async def test_payment_dates_unset_where_the_calendar_does_not_answer(tmp_path: Path) -> None:
+    lake = recorder()
+    lake.answer("ReadCalendar", lambda _: ops.ReadCalendarResult(found=False))
+    work = feed(lake, tmp_path)
+    lake.answer("ObservationsWanted", lambda _: want("w-1", [POOL]).message)
+    await lake.hear(work, "ObservationsWanted")
+    rows = factors(lake)
+    # The month before last, the calendar silent on this month's fourth day.
+    assert rows and all(not r.payment_date for r in rows)
+    assert all(r.record_date for r in rows) and "is not held" in work.calendar.error
 
 
 def test_a_record_is_identified_by_its_identifier_or_terms() -> None:
