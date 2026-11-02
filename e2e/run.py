@@ -16,7 +16,7 @@ currency: the deployment's provisional record.
    September's Factor B, as the contract's fixtures key them
    (`GNMA:AA0912:202610`, factor month 202610, record date 2026-10-31, paid
    2026-11-20 as a Ginnie II pool, published 2026-11-05).
-4. Factor B: the settings saved again wake the plugin's check, which finds
+4. Factor B: a setting changed wakes the plugin's check, which finds
    October's Factor B, published after its Factor A -- 0.83102211 --
    recorded as the row's version 2; read by payment date, the pool's October
    factor is the final one.
@@ -153,7 +153,7 @@ def run():
     must(seen >= 2, f"step 3, the reader's watermark: {year['watermark']}")
 
     # 4. Factor B: the check woken finds October's final factor.
-    runner("settings", "sample_data=true")
+    runner("settings", "sample_data=true", "files_url=https://files.invalid/ginnie-mae")
     again = until(120, lambda: (lambda r: r if months(r)[-1:] == [("202610", "0.83102211", 2)]
                                 else None)(read(asked)),
                   "step 4, October's Factor B was not read as version 2")
