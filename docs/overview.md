@@ -15,7 +15,7 @@ record.
   with the month it reflects, its record date and payment date; a floating
   tranche's coupon for the period. A year of history when a pool is first
   asked for, then each month's preliminary factor and its final one -- a
-  final factor that differs is the row's next version.
+  final one is the row's next version, its source the final file.
 - **Terms**, offered to the record: a pool's number, interest rate, issue
   and maturity dates, original balance and, by its program, its payment
   delay and day; a tranche's series, class, original balance, final

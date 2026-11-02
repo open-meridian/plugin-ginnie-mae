@@ -4,8 +4,8 @@ its Disclosure Data Download publishes them under.
 - Factor A, preliminary, the fourth business day: `factorA1_YYYYMM` (Ginnie
   I pools) and `factorA2_YYYYMM` (Ginnie II);
 - Factor B, final, the sixth: `factorB1_YYYYMM` and `factorB2_YYYYMM` -- a
-  pool's Factor B factor differing from its Factor A one is the row's next
-  version;
+  pool's Factor B row is its Factor A row's next version, the final file
+  its source;
 - the REMIC factor files, `remic1_YYYYMM` and `remic2_YYYYMM`, mid-month.
 
 The month is the factor month (`factorA1_202609.zip`, published 6 October

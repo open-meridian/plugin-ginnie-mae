@@ -11,8 +11,8 @@ The first version (ruling 686, the plan's Q13 and G'), on open-meridian
   published. Read from Ginnie Mae's Factor A and B files for Ginnie I and II
   pools and its REMIC 1 and 2 factor files, in its published layouts; a pool
   found by its number, a tranche by its series and class; a pool number
-  meeting two records reported ambiguous; Factor B's differing factor the
-  row's next version.
+  meeting two records reported ambiguous; Factor B's row the
+  row's next version, its source the final file.
 - **`reference`**: the terms the same rows state offered to the record at
   its template (`TPL-mbs-pool`, `TPL-cmo-tranche`), each with its
   provenance.

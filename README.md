@@ -12,10 +12,10 @@ keyed by `GNMA`, the pool (or series and tranche) and the factor month --
 (the month Ginnie Mae names its files by), record date (the file's as-of
 date) and payment date (a Ginnie I pool's 15th, a Ginnie II pool's 20th, on
 the next business day; a tranche's as the REMIC file states it); a floating
-tranche's period coupon. Factor A is preliminary and Factor B final: a final
-factor that differs is the row's next version. Factors are recorded only for
-the records the deployment names (ruling 749), when a reader asks, and kept
-current daily.
+tranche's period coupon. Factor A is preliminary and Factor B final: the
+final factor is the row's next version, its source the final file. Factors
+are recorded only for the records the deployment names (ruling 749), when a
+reader asks, and kept current daily.
 
 ## Using it
 

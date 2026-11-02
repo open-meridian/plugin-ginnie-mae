@@ -23,8 +23,8 @@ the factor exactly as published, its factor month (the file's month), record
 date (the factor file's as-of date, or the REMIC file's record date) and
 payment date (the pool's program's day, or the REMIC file's own), its
 business date the day the file says it was published; a floating or inverse
-floating tranche's coupon for the period. Factor B's factor is the row's
-next version where it differs from Factor A's. Ginnie Mae's factor files
+floating tranche's coupon for the period. Factor B's row is the row's next
+version, its source the final file, whether or not its factor changed. Ginnie Mae's factor files
 state no WAC, WAM or WALA, so none is recorded, and no publication time, so
 none is stated.
 """
@@ -210,7 +210,7 @@ class Disclosures(data.Role):
 
     async def record(self, found: list[tuple[Security, Found, str]], want_id: str = "") -> int:
         """The rows found recorded, Factor A's in one batch before Factor B's,
-        so a final factor differing from the preliminary is its next version;
+        so the final factor is the row's next version, after the preliminary;
         their terms offered."""
         sent = 0
         for batch in (

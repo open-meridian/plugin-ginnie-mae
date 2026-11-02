@@ -106,7 +106,7 @@ def call(tool, arguments=None):
 
 
 def months(said):
-    return [(f["month"], f["factor"], f["version"]) for f in said["factors"]]
+    return sorted((f["month"], f["factor"], f["version"]) for f in said["factors"])
 
 
 def run():
@@ -149,27 +149,30 @@ def run():
     asked = f"/factors?subject={pool}&from=2025-11-01&to=2026-11-30"
     year = until(120, lambda: (lambda r: r if len(r["factors"]) == 2 else None)(read(asked)),
                  "step 3, the pool's two factors were not read")
-    # September's Factor B states the same factor as its Factor A.
-    must([m[:2] for m in months(year)] == [("202609", "0.84017733"), ("202610", "0.83102210")]
-         and months(year)[1][2] == 1,
-         f"step 3, September's and October's factors as published: {year}")
-    october = year["factors"][1]
+    # September's Factor B, published after its Factor A, is its version 2,
+    # though it states the same factor: the final file is its source now.
+    must(months(year) == [("202609", "0.84017733", 2), ("202610", "0.83102210", 1)],
+         f"step 3, September's final and October's preliminary factors: {year}")
+    by_month = {f["month"]: f for f in year["factors"]}
+    october, september = by_month["202610"], by_month["202609"]
     must(october["row_key"] == "GNMA:AA0912:202610" and october["dataset"] == DATASET
          and october["subject"] == pool and october["record_date"] == "2026-10-31"
          and october["payment_date"] == "2026-11-20" and october["business_date"] == "2026-11-05"
-         and october["raw"].endswith("#3"),
+         and october["raw"].endswith("#3") and "factorA2_202610" in october["raw"],
          f"step 3, October's row as the fixtures key it: {october}")
-    must(year["factors"][0]["payment_date"] == "2026-10-20",
-         f"step 3, September's paid the 20th: {year}")
+    must(september["payment_date"] == "2026-10-20" and september["business_date"] == "2026-10-08"
+         and "factorB2_202609" in september["raw"],
+         f"step 3, September's from its Factor B, paid the 20th: {september}")
     seen = year["watermark"].get(DATASET, 0)
-    must(seen >= 2, f"step 3, the reader's watermark: {year['watermark']}")
+    must(seen >= 3, f"step 3, the reader's watermark: {year['watermark']}")
 
     # 4. Factor B: the check woken finds October's final factor.
     runner("settings", "sample_data=true", "files_url=https://files.invalid/ginnie-mae")
     again = until(120, lambda: (lambda r: r if months(r)[-1:] == [("202610", "0.83102211", 2)]
                                 else None)(read(asked)),
                   "step 4, October's Factor B was not read as version 2")
-    must(again["factors"][-1]["business_date"] == "2026-11-09",
+    final = {f["month"]: f for f in again["factors"]}["202610"]
+    must(final["business_date"] == "2026-11-09" and "factorB2_202610" in final["raw"],
          f"step 4, Factor B published 9 November: {again}")
 
     # 5. Caught up after the sequence last seen.

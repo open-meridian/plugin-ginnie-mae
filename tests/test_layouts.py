@@ -89,3 +89,14 @@ def test_names_written_two_ways() -> None:
     assert same_pool("000004", "4") and same_pool("aa0912", "AA0912")
     assert not same_pool("", "")
     assert same_series("GNMA-2002-005O", "2002-005O") and same_series("GNMA 2002-005O", "2002005O")
+
+
+async def test_a_file_kept_before_a_restart_is_the_same_raw_record(tmp_path: Path) -> None:
+    from ginnie_mae.files import Samples, Store
+
+    fetched = await Samples().get("factorA2_202610")
+    assert fetched is not None
+    first, new = Store(tmp_path).keep(fetched)
+    assert new
+    again, new = Store(tmp_path).keep(fetched)
+    assert not new and again.key == first.key and again.path == first.path
