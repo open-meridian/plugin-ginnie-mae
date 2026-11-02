@@ -1,0 +1,24 @@
+{
+ "about": "Ginnie Mae's factor and REMIC factor files in its published layouts (factorA2_layout.pdf, factorB2_layout.pdf, remic1_layout.pdf), synthetic values for the pool and tranche the tests and e2e name; not Ginnie Mae's data.",
+ "files": {
+  "factorA2_202609": {
+   "file": "factorA2_202609.txt"
+  },
+  "factorB2_202609": {
+   "file": "factorB2_202609.txt"
+  },
+  "factorA2_202610": {
+   "file": "factorA2_202610.txt"
+  },
+  "factorB2_202610": {
+   "file": "factorB2_202610.txt",
+   "later": true
+  },
+  "remic1_202609": {
+   "file": "remic1_202609.txt"
+  },
+  "remic1_202610": {
+   "file": "remic1_202610.txt"
+  }
+ }
+}

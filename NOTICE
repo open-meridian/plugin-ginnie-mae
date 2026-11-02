@@ -1,0 +1,10 @@
+plugin-ginnie-mae
+Copyright 2026 Societal Lab Inc.
+
+Licensed under the Apache License, Version 2.0. See LICENSE.
+
+The data this plugin reads are Ginnie Mae's mortgage-backed securities
+disclosures, which it publishes to signed-in users of its Disclosure Data
+Download under its terms of use. The files under tests/responses/ are Ginnie
+Mae's published samples of its factor and REMIC factor file layouts. This
+project is not affiliated with or endorsed by Ginnie Mae.
