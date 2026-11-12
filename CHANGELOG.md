@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.2.0
+
+On open-meridian 0.36.0, contract 30, on core aae501d's harness (chart
+0.1.538); `meridian` 0.1.60 in the check. What the plugin records is
+unchanged.
+
+- **Ginnie Mae's terms in words** (ruling 1032): the dataset's
+  `terms_and_pricing` says the factor files are Ginnie Mae's own
+  disclosures, free from its Disclosure Data Download to users who accept
+  its terms of use, its loan-level terms barring re-identification (no
+  loan-level file is read). Shown on Data sources and in the Datasets
+  page's row details. The plugin still declares no licence.
+- **A gap recovered by backfill** (`gap_recovery`): the files hold thirteen
+  months, read again on a want. No `sessions_calendar_id`: factors are
+  published monthly, in no session.
+- **Row keys checked against the lake's rule 5** (ruled 2026-11-12): a
+  factor is keyed by the pool, or the REMIC series and class, and its month
+  (`GNMA:<pool>:<YYYYMM>`), its valid time the month's; Factor A then Factor
+  B for a month restate the same key over the same month and the same
+  record. The key names the pool, not its record, so a pool resolved again
+  to another record would restate under another first subject: listed for
+  step 3d, unchanged.
+- `meridian plugin migrate --to 0.36.0` moved the pins (the base by
+  digest, `meridian` 0.1.60); the tests' pin and absent-licence checks read
+  0.36.0 and the words.
+- Core's runtime and harness images at `aae501d`, by digest.
+
 ## 0.1.0
 
 The first version (ruling 686, the plan's Q13 and G'), on open-meridian

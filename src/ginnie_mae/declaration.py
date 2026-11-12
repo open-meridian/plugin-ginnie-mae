@@ -11,8 +11,11 @@ files being checked daily; `history` 396 days, thirteen months; its day New
 York's; no venue, no calendar. Ginnie Mae's factor files state no WAC, WAM
 or WALA, so the dataset does not declare them.
 
-No default licence (rulings 1030 to 1032): Ginnie Mae's terms are accepted
-on its download page, and the deployment's; docs/terms.md summarises them.
+No licence (rulings 1030 to 1032): Ginnie Mae's terms are accepted on its
+download page, and the deployment's; the dataset describes them in words
+(`terms_and_pricing`, contract 30), as docs/terms.md does. A gap is
+recovered by `backfill` (`gap_recovery`): the files hold thirteen months,
+so the lake asks again through its want.
 
 **Storage:** the files as read, archivable, ten years by default.
 """
@@ -32,6 +35,14 @@ CADENCE = 86_400
 HISTORY_DAYS = 396
 WINDOW_DAYS = 3650
 MOST_WINDOW_DAYS = 36500
+#: Ginnie Mae's terms in plain words (contract 30, ruling 1032).
+TERMS = (
+    "Ginnie Mae's own disclosures: its pools' and REMIC tranches' monthly factor files, "
+    "published on its Disclosure Data Download, free of charge, to users who sign in and "
+    "accept its terms of use on the download page. Its loan-level terms bar any attempt to "
+    "re-identify borrowers; this plugin reads no loan-level file. Ginnie Mae's current "
+    "terms on its site govern."
+)
 
 GINNIE_MAE = meridian.DatasetDeclaration(
     key=KEY,
@@ -41,6 +52,8 @@ GINNIE_MAE = meridian.DatasetDeclaration(
     cadence=CADENCE,
     history=HISTORY_DAYS,
     day_time_zone="America/New_York",
+    terms_and_pricing=TERMS,
+    gap_recovery="backfill",
 )
 CATALOGUE = [GINNIE_MAE]
 FILES_KIND = RecordKind(FILES, "Disclosure files", window_days=WINDOW_DAYS)
