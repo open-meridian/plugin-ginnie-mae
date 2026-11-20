@@ -44,7 +44,7 @@ Connection and Datasets, each also a read tool (`read_connection`,
 
 The tests read Ginnie Mae's own published sample files (`tests/responses/`)
 and files in its layouts committed under `src/ginnie_mae/samples/`; nothing
-in CI reaches Ginnie Mae. Version 0.2.1 is built on `open-meridian==0.37.0`,
+in CI reaches Ginnie Mae. Version 0.2.1 is built on `open-meridian==0.37.1`,
 contract 30.
 
 ## Licence
